@@ -1,0 +1,17 @@
+.container {
+  flex: 1;
+  background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.svg:active {
+  cursor: grabbing;
+}

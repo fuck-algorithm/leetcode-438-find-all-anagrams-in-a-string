@@ -1,0 +1,83 @@
+.container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 100;
+}
+
+.floatBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #07c160 0%, #06ae56 100%);
+  border-radius: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(7, 193, 96, 0.4);
+  transition: all 0.3s;
+}
+
+.floatBtn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(7, 193, 96, 0.5);
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
+
+.text {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.popup {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popupContent {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 200px;
+}
+
+.popupTitle {
+  margin: 0 0 12px 0;
+  color: #333;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.qrCode {
+  width: 160px;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.popupHint {
+  margin: 12px 0 0 0;
+  color: #666;
+  font-size: 12px;
+}
