@@ -8,5 +8,5 @@ export default defineConfig({
     port: 61481,
     host: true
   },
-  base: '/438-find-all-anagrams-in-a-string/'
+  base: '/leetcode-438-find-all-anagrams-in-a-string/'
 })

@@ -4,7 +4,7 @@ LeetCode 第 438 题算法可视化演示
 
 ## 在线演示
 
-👉 [点击查看在线演示](https://fuck-algorithm.github.io/438-find-all-anagrams-in-a-string/)
+👉 [点击查看在线演示](https://fuck-algorithm.github.io/leetcode-438-find-all-anagrams-in-a-string/)
 
 ## 题目链接
 
