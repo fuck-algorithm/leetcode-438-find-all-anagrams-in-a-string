@@ -9,11 +9,11 @@ export function validateInput(s: string, p: string): { valid: boolean; error?: s
   }
 
   // 检查长度限制
-  if (s.length > 30000) {
-    return { valid: false, error: '字符串 s 长度不能超过 30000' };
+  if (s.length > 200) {
+    return { valid: false, error: '字符串 s 长度不能超过 200，保证步骤回放流畅' };
   }
-  if (p.length > 30000) {
-    return { valid: false, error: '字符串 p 长度不能超过 30000' };
+  if (p.length > 200) {
+    return { valid: false, error: '字符串 p 长度不能超过 200' };
   }
 
   // 检查是否只包含小写字母

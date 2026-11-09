@@ -1,4 +1,5 @@
 import type { AlgorithmStep, AlgorithmCode } from '../types';
+import { addTeachingSnapshots } from './fixedWindow';
 
 // 不定长滑窗算法代码
 export const variableWindowCode: AlgorithmCode = {
@@ -95,7 +96,7 @@ export const variableWindowCode: AlgorithmCode = {
 
 // 生成不定长滑窗算法步骤
 export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep[] {
-  const steps: AlgorithmStep[] = [];
+  const steps: Omit<AlgorithmStep, 'teaching'>[] = [];
   let stepId = 0;
 
   // 初始化目标计数
@@ -110,8 +111,8 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
   // 初始化步骤
   steps.push({
     id: stepId++,
-    description: `初始化：统计目标字符串 p="${p}" 中每个字符的出现次数`,
-    codeLines: { java: [4, 5, 6, 7], python: [2], golang: [3, 4, 5, 6], javascript: [3, 4, 5, 6] },
+    description: `初始化：将 p="${p}" 的频次填入 cnt；cnt 表示剩余需求（目标频次 − 窗口频次）`,
+    codeLines: { java: [10, 11], python: [3, 4], golang: [7, 8], javascript: [5, 6] },
     variables: { cnt: { ...cnt } },
     windowState: { left: 0, right: -1, windowContent: '' },
     charCount: { ...cnt },
@@ -134,7 +135,7 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
     steps.push({
       id: stepId++,
       description: `右指针移动到位置 ${right}，字符 '${c}' 进入窗口，cnt['${c}'] 减 1 变为 ${cnt[c]}`,
-      codeLines: { java: [10, 11], python: [6, 7], golang: [9, 10], javascript: [9, 10, 11] },
+      codeLines: { java: [16], python: [37], golang: [57], javascript: [81] },
       variables: { right, c, cnt: { ...cnt }, 'cnt[c]': cnt[c] },
       windowState: { left, right, windowContent: s.slice(left, right + 1) },
       charCount: { ...cnt },
@@ -149,22 +150,22 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
     while (cnt[c] < 0) {
       const outChar = s[left];
       cnt[outChar] = (cnt[outChar] || 0) + 1;
-      
+      const removedIndex = left;
+      left++;
+
       steps.push({
         id: stepId++,
-        description: `字符 '${c}' 过多 (cnt['${c}']=${cnt[c]+1}<0)，左指针从 ${left} 移动，字符 '${outChar}' 离开窗口`,
-        codeLines: { java: [13, 14, 15], python: [9, 10, 11], golang: [12, 13, 14], javascript: [13, 14, 15] },
-        variables: { left, outChar, cnt: { ...cnt }, 'cnt[c]': cnt[c] },
-        windowState: { left: left + 1, right, windowContent: s.slice(left + 1, right + 1) },
+        description: `当前字符 '${c}' 超出目标需求；移出 s[${removedIndex}]='${outChar}' 后 cnt['${c}']=${cnt[c]}，left 推进到 ${left}`,
+        codeLines: { java: [18, 19, 20], python: [39, 40, 41], golang: [59, 60, 61], javascript: [83, 84, 85] },
+        variables: { left, outChar, c, removedIndex, cnt: { ...cnt }, 'cnt[c]': cnt[c] },
+        windowState: { left, right, windowContent: s.slice(left, right + 1) },
         charCount: { ...cnt },
         targetCount: { ...targetCount },
         results: [...results],
-        highlightIndices: [left],
+        highlightIndices: [removedIndex],
         isMatch: false,
         animationType: 'leave'
       });
-      
-      left++;
     }
 
     // 检查窗口长度是否等于目标长度
@@ -173,10 +174,10 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
 
     steps.push({
       id: stepId++,
-      description: isMatch 
-        ? `窗口长度 ${windowLength} 等于目标长度 ${p.length}，找到异位词！起始索引 ${left}` 
-        : `窗口长度 ${windowLength} ${windowLength < p.length ? '小于' : '大于'} 目标长度 ${p.length}，继续`,
-      codeLines: { java: [17, 18, 19], python: [13, 14], golang: [16, 17, 18], javascript: [17, 18, 19] },
+      description: isMatch
+        ? `缩窗后每个字符均未超出目标需求（cnt ≥ 0），且窗口长度 ${windowLength} 等于目标长度 ${p.length}，因此频次完全相同；找到异位词，起始索引 ${left}`
+        : `缩窗后每个字符均未超出目标需求（cnt ≥ 0）；窗口长度 ${windowLength} ${windowLength < p.length ? '小于' : '大于'} 目标长度 ${p.length}，继续`,
+      codeLines: { java: [23, 24], python: [43, 44], golang: [64, 65], javascript: [88, 89] },
       variables: { windowLength, targetLength: p.length, isMatch },
       windowState: { left, right, windowContent: s.slice(left, right + 1) },
       charCount: { ...cnt },
@@ -196,7 +197,7 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
   steps.push({
     id: stepId++,
     description: `算法结束，找到 ${results.length} 个异位词，起始索引为 [${results.join(', ')}]`,
-    codeLines: { java: [22], python: [16], golang: [21], javascript: [22] },
+    codeLines: { java: [27, 28], python: [46], golang: [67, 68], javascript: [91, 92, 93] },
     variables: { ans: results },
     windowState: { left: -1, right: -1, windowContent: '' },
     charCount: {},
@@ -207,5 +208,5 @@ export function generateVariableWindowSteps(s: string, p: string): AlgorithmStep
     animationType: 'result'
   });
 
-  return steps;
+  return addTeachingSnapshots(steps, s, 'remaining-demand');
 }

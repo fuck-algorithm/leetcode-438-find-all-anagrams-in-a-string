@@ -106,7 +106,7 @@ export const fixedWindowCode: AlgorithmCode = {
 
 // 生成定长滑窗算法步骤
 export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] {
-  const steps: AlgorithmStep[] = [];
+  const steps: Omit<AlgorithmStep, 'teaching'>[] = [];
   let stepId = 0;
 
   // 初始化目标计数
@@ -119,7 +119,7 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
   steps.push({
     id: stepId++,
     description: `初始化：统计目标字符串 p="${p}" 中每个字符的出现次数`,
-    codeLines: { java: [5, 6, 7, 8], python: [2, 3], golang: [3, 4, 5, 6], javascript: [3, 4, 5, 6] },
+    codeLines: { java: [7, 8], python: [4], golang: [6, 7], javascript: [6, 7] },
     variables: { cntP: { ...targetCount }, cntS: {} },
     windowState: { left: -1, right: -1, windowContent: '' },
     charCount: {},
@@ -142,7 +142,7 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
     steps.push({
       id: stepId++,
       description: `右指针移动到位置 ${right}，字符 '${c}' 进入窗口`,
-      codeLines: { java: [10, 11], python: [5, 6], golang: [8, 9], javascript: [8, 9, 10] },
+      codeLines: { java: [11, 12], python: [7, 8], golang: [10, 11], javascript: [10, 11, 12] },
       variables: { right, c, cntS: { ...charCount } },
       windowState: { 
         left: Math.max(0, right - p.length + 1), 
@@ -162,8 +162,8 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
     if (left < 0) {
       steps.push({
         id: stepId++,
-        description: `窗口长度不足 ${p.length}，继续扩展窗口`,
-        codeLines: { java: [13, 14], python: [8, 9], golang: [11, 12, 13], javascript: [12, 13] },
+        description: `当前窗口只有 ${right + 1} 个字符，未达到 p 的长度 ${p.length}，所以先不比较频次，继续读入下一个字符。`,
+        codeLines: { java: [14, 15], python: [10, 11, 12], golang: [13, 14, 15], javascript: [14, 15, 16] },
         variables: { left, windowLength: right + 1, targetLength: p.length },
         windowState: { left: 0, right, windowContent: s.slice(0, right + 1) },
         charCount: { ...charCount },
@@ -182,9 +182,9 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
     steps.push({
       id: stepId++,
       description: isMatch 
-        ? `窗口 [${left}, ${right}] 的字符频率与目标匹配！找到异位词，起始索引 ${left}` 
+        ? `窗口 [${left}, ${right}] 的字符频率与目标匹配！找到异位词，起始索引 ${left}`
         : `窗口 [${left}, ${right}] 的字符频率与目标不匹配`,
-      codeLines: { java: [16, 17, 18], python: [11, 12], golang: [15, 16, 17], javascript: [15, 16, 17] },
+      codeLines: { java: [17, 18], python: [14, 15], golang: [18, 19], javascript: [17, 18] },
       variables: { left, right, isMatch, windowContent: s.slice(left, right + 1) },
       windowState: { left, right, windowContent: s.slice(left, right + 1) },
       charCount: { ...charCount },
@@ -209,7 +209,7 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
     steps.push({
       id: stepId++,
       description: `左指针移动，字符 '${out}' 离开窗口`,
-      codeLines: { java: [20, 21], python: [14, 15, 16, 17], golang: [19], javascript: [19, 20, 21, 22] },
+      codeLines: { java: [21], python: [17, 18, 19, 20], golang: [22], javascript: [21, 22, 23, 24, 25] },
       variables: { left, out, cntS: { ...charCount } },
       windowState: { left: left + 1, right, windowContent: s.slice(left + 1, right + 1) },
       charCount: { ...charCount },
@@ -225,7 +225,7 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
   steps.push({
     id: stepId++,
     description: `算法结束，找到 ${results.length} 个异位词，起始索引为 [${results.join(', ')}]`,
-    codeLines: { java: [23], python: [19], golang: [21], javascript: [24] },
+    codeLines: { java: [27, 28], python: [51], golang: [74, 75], javascript: [103, 104] },
     variables: { ans: results },
     windowState: { left: -1, right: -1, windowContent: '' },
     charCount: {},
@@ -236,7 +236,63 @@ export function generateFixedWindowSteps(s: string, p: string): AlgorithmStep[] 
     animationType: 'result'
   });
 
-  return steps;
+  return addTeachingSnapshots(steps, s, 'window-frequency');
+}
+
+export function addTeachingSnapshots<T extends Omit<AlgorithmStep, 'teaching'>>(
+  steps: T[],
+  s: string,
+  meaning: 'window-frequency' | 'remaining-demand',
+): AlgorithmStep[] {
+  let previous = { left: -1, right: -1 };
+  let previousCounts: Record<string, number> = {};
+  return steps.map((step) => {
+    const { left, right } = step.windowState;
+    const operation = step.animationType === 'init' ? 'init'
+      : step.animationType === 'enter' ? 'enter'
+      : step.animationType === 'leave' ? 'shrink'
+      : step.animationType === 'match' ? 'match'
+      : step.animationType === 'result' ? 'done' : 'compare';
+    const index = step.highlightIndices[0];
+    // A count delta must describe the character touched by this operation, not an arbitrary map difference.
+    const touchedIndex = operation === 'enter' ? step.windowState.right
+      : operation === 'shrink' ? (step.variables.removedIndex as number | undefined) ?? index
+      : undefined;
+    const countChar = touchedIndex === undefined ? undefined : s[touchedIndex];
+    const before = countChar ? previousCounts[countChar] || 0 : 0;
+    const after = countChar ? step.charCount[countChar] || 0 : 0;
+    const triggerChar = typeof step.variables.c === 'string' ? step.variables.c : undefined;
+    const stillExcess = meaning === 'remaining-demand' && triggerChar !== undefined
+      ? (step.charCount[triggerChar] || 0) < 0 : false;
+    const decision = operation === 'compare' || operation === 'match'
+      ? { matched: step.isMatch, reason: step.description }
+      : operation === 'shrink' && meaning === 'remaining-demand'
+        ? { matched: !stillExcess, reason: stillExcess
+          ? `移出字符后 cnt['${triggerChar}'] 仍小于 0，${triggerChar} 仍超额，继续收缩`
+          : `移出字符后 cnt['${triggerChar}'] 已不小于 0，超额解除，停止收缩` }
+        : null;
+    const boundsBefore = operation === 'shrink'
+      ? { left: (step.variables.removedIndex as number | undefined) ?? left, right }
+      : previous;
+    const countSummary = countChar ? `${countChar} 的计数 ${before}→${after}` : '';
+    const narration = operation === 'enter' && countSummary
+      ? `读入 s[${touchedIndex}]='${countChar}'，${countSummary}；当前窗口边界为 [${left}, ${right}]。`
+      : operation === 'shrink' && countSummary
+        ? `移出 s[${(step.variables.removedIndex as number | undefined) ?? index}]='${countChar}'，${countSummary}；窗口从 [${boundsBefore.left}, ${right}] 移到 [${left}, ${right}]。`
+        : operation === 'done'
+          ? `扫描完成，找到 ${step.results.length} 个异位词，起始索引为 [${step.results.join(', ')}]。`
+          : operation === 'compare' || operation === 'match'
+            ? step.description
+            : step.description;
+    const enriched: AlgorithmStep = { ...step, description: narration, teaching: {
+      operation, focus: index === undefined ? null : { char: s[index] ?? '', index },
+      countChange: countChar ? { char: countChar, before, after, meaning } : null,
+      bounds: { before: boundsBefore, after: { left, right } }, decision, narration,
+    } };
+    previous = { left, right };
+    previousCounts = step.charCount;
+    return enriched;
+  });
 }
 
 function mapsEqual(a: Record<string, number>, b: Record<string, number>): boolean {

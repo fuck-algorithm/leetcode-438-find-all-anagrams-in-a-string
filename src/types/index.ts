@@ -1,4 +1,15 @@
 // 算法步骤类型
+export type StepOperation = 'init' | 'enter' | 'shrink' | 'compare' | 'match' | 'done';
+
+export interface AlgorithmTeaching {
+  operation: StepOperation;
+  focus: { char: string; index: number } | null;
+  countChange: { char: string; before: number; after: number; meaning: 'window-frequency' | 'remaining-demand' } | null;
+  bounds: { before: { left: number; right: number }; after: { left: number; right: number } };
+  decision: { matched: boolean; reason: string } | null;
+  narration: string;
+}
+
 export interface AlgorithmStep {
   id: number;
   description: string;
@@ -28,6 +39,7 @@ export interface AlgorithmStep {
   isMatch: boolean;
   // 动画类型
   animationType: 'enter' | 'leave' | 'match' | 'compare' | 'init' | 'result';
+  teaching: AlgorithmTeaching;
 }
 
 // 算法类型

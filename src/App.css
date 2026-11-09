@@ -5,9 +5,12 @@
 }
 
 html, body, #root {
-  height: 100%;
+  min-height: 100%;
   width: 100%;
-  overflow: hidden;
+}
+
+body {
+  min-width: 320px;
 }
 
 body {
@@ -19,22 +22,23 @@ body {
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  min-height: 100vh;
+  width: 100%;
+  min-width: 0;
 }
 
 .main-content {
   flex: 1;
   display: flex;
   gap: 12px;
-  padding: 12px;
+  padding: 8px;
+  min-width: 0;
   min-height: 0;
-  overflow: hidden;
 }
 
 .code-section {
-  width: 380px;
+  width: clamp(320px, 24vw, 380px);
+  min-width: 0;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -46,6 +50,39 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .code-section {
+    order: 2;
+    width: 100%;
+    min-height: 280px;
+  }
+
+  .canvas-section {
+    order: 1;
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 600px) {
+  .main-content {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .code-section {
+    min-height: 240px;
+  }
+
+  .canvas-section {
+    min-height: 460px;
+  }
 }
 
 /* 滚动条样式 */

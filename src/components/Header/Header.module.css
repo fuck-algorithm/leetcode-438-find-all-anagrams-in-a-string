@@ -100,3 +100,50 @@
   font-size: 13px;
   color: #fbd38d;
 }
+
+@media (max-width: 600px) {
+  .header {
+    padding: 8px 10px;
+    height: auto;
+    min-height: 48px;
+    gap: 8px;
+  }
+
+  .leftSection {
+    display: none;
+  }
+
+  .rightSection {
+    flex: 0 0 auto;
+  }
+
+  .centerSection {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .backLink {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .title {
+    font-size: 14px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .thoughtsBtn {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .githubLink {
+    padding: 5px;
+  }
+
+  .starCount {
+    display: none;
+  }
+}
