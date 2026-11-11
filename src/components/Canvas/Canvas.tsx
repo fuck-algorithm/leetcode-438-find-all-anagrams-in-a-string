@@ -128,8 +128,8 @@ export function Canvas() {
       const contentHeight = Math.max(320, contentBottom - contentTop);
       const stringY = contentTop + contentHeight * 0.1;
       const windowY = stringY + charHeight + contentHeight * 0.12;
-      const targetY = contentTop + contentHeight * 0.52;
-      const countY = contentTop + contentHeight * 0.68;
+      const targetY = contentTop + contentHeight * 0.42;
+      const countY = targetY + charHeight + 84;
       const { windowState, highlightIndices, isMatch, charCount, targetCount, teaching } = currentStepData;
 
       if (resetView) {
@@ -256,12 +256,12 @@ export function Canvas() {
         .attr('class', 'canvas-title').attr('x', logicalWidth / 2).attr('y', 26).attr('text-anchor', 'middle')
         .attr('fill', '#f7fafc').attr('font-size', '13px').attr('font-weight', 'bold').text((d) => d);
       annotations.selectAll<SVGTextElement, string>('text.target-caption').data(['目标 p：需要匹配的字符组成（顺序不重要）']).join('text')
-        .attr('class', 'target-caption').attr('x', logicalWidth / 2).attr('y', targetY - 12).attr('text-anchor', 'middle')
+        .attr('class', 'target-caption').attr('x', logicalWidth / 2).attr('y', targetY - 18).attr('text-anchor', 'middle')
         .attr('fill', '#86d7bf').attr('font-size', '11px').text((d) => d);
       annotations.selectAll<SVGTextElement, string>('text.count-title').data(countData.length ? [algorithmType === 'variable-window'
         ? '剩余需求 cnt = 目标 − 窗口；负数代表超量，需移动左边界'
         : '对照每种字符：窗口频次是否等于目标频次'] : [])
-        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 48).attr('text-anchor', 'middle')
+        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 22).attr('text-anchor', 'middle')
         .attr('fill', '#a0aec0').attr('font-size', '12px').text((d) => d);
       const legendItems = [
         { id: 'window', color: '#315f58', label: '目标 p' },
