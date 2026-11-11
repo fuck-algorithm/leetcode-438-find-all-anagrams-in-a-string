@@ -129,7 +129,7 @@ export function Canvas() {
       const stringY = contentTop + contentHeight * 0.1;
       const windowY = stringY + charHeight + contentHeight * 0.12;
       const targetY = contentTop + contentHeight * 0.52;
-      const countY = contentTop + contentHeight * 0.7;
+      const countY = contentTop + contentHeight * 0.68;
       const { windowState, highlightIndices, isMatch, charCount, targetCount, teaching } = currentStepData;
 
       if (resetView) {
@@ -261,7 +261,7 @@ export function Canvas() {
       annotations.selectAll<SVGTextElement, string>('text.count-title').data(countData.length ? [algorithmType === 'variable-window'
         ? '剩余需求 cnt = 目标 − 窗口；负数代表超量，需移动左边界'
         : '对照每种字符：窗口频次是否等于目标频次'] : [])
-        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 20).attr('text-anchor', 'middle')
+        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 48).attr('text-anchor', 'middle')
         .attr('fill', '#a0aec0').attr('font-size', '12px').text((d) => d);
       const legendItems = [
         { id: 'window', color: '#315f58', label: '目标 p' },
