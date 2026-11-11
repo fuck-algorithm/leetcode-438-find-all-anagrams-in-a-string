@@ -111,19 +111,25 @@ export function Canvas() {
       svg.attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio', 'none');
 
       const { s, p } = inputData;
-      const charWidth = 36;
       const charHeight = 40;
       const countChars = [...new Set([...Object.keys(currentStepData.charCount), ...Object.keys(currentStepData.targetCount)])].sort();
-      const countPitch = 80;
-      const contentWidth = Math.max(s.length * charWidth, countChars.length * countPitch, 360);
-      const fitScale = Math.min(1, (width - 32) / contentWidth, (height - 32) / 420);
+      const baseCharWidth = 48;
+      const countPitch = 128;
+      const contentWidth = Math.max(Math.max(s.length, p.length) * baseCharWidth + 64, countChars.length * countPitch + 64, 360);
+      const fitScale = Math.min(1, (width - 24) / contentWidth, (height - 32) / 520);
       const scale = Math.max(0.01, fitScale);
       const logicalWidth = width / scale;
+      const logicalHeight = height / scale;
+      const desiredCharPitch = 76;
+      const charWidth = Math.max(24, Math.min(96, Math.min(desiredCharPitch, (logicalWidth - 160) / Math.max(s.length, p.length, 1))));
       const startX = (logicalWidth - s.length * charWidth) / 2;
-      const stringY = 64;
-      const windowY = stringY + charHeight + 50;
-      const targetY = windowY + 50;
-      const countY = targetY + 92;
+      const contentTop = Math.max(36, logicalHeight * 0.1);
+      const contentBottom = Math.min(logicalHeight - 76, logicalHeight * 0.94);
+      const contentHeight = Math.max(320, contentBottom - contentTop);
+      const stringY = contentTop + contentHeight * 0.1;
+      const windowY = stringY + charHeight + contentHeight * 0.12;
+      const targetY = contentTop + contentHeight * 0.52;
+      const countY = contentTop + contentHeight * 0.7;
       const { windowState, highlightIndices, isMatch, charCount, targetCount, teaching } = currentStepData;
 
       if (resetView) {
@@ -143,7 +149,7 @@ export function Canvas() {
       const charUpdate = charEnter.merge(charJoin).attr('data-key', (d) => d.index);
       charUpdate.select<SVGRectElement>('rect')
         .attr('x', (d) => startX + d.index * charWidth).attr('y', stringY)
-        .attr('width', charWidth - 2).attr('height', charHeight)
+        .attr('width', charWidth - Math.min(8, charWidth * 0.12)).attr('height', charHeight)
         .attr('fill', (d) => {
           const inWindow = windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right;
           if (isMatch && inWindow) return '#48bb78';
@@ -178,7 +184,7 @@ export function Canvas() {
       const targetUpdate = targetEnter.merge(targetJoin);
       targetUpdate.select<SVGRectElement>('rect')
         .attr('x', (d) => targetStartX + d.index * charWidth).attr('y', targetY)
-        .attr('width', charWidth - 2).attr('height', charHeight);
+        .attr('width', charWidth - Math.min(8, charWidth * 0.12)).attr('height', charHeight);
       targetUpdate.select<SVGTextElement>('text')
         .attr('x', (d) => targetStartX + d.index * charWidth + charWidth / 2 - 1)
         .attr('y', targetY + charHeight / 2 + 5).text((d) => d.char);
@@ -211,7 +217,7 @@ export function Canvas() {
         target: targetCount[char] || 0,
         remaining: charCount[char] || 0,
       }));
-      const countStartX = (logicalWidth - countData.length * countPitch) / 2;
+      const countStartX = (logicalWidth - Math.max(0, countData.length - 1) * countPitch) / 2 - 50;
       const countJoin = counts.selectAll<SVGGElement, CountDatum>('g.count-card').data(countData, (d) => d.char);
       countJoin.exit().remove();
       const countEnter = countJoin.enter().append('g').attr('class', 'count-card');
@@ -255,7 +261,7 @@ export function Canvas() {
       annotations.selectAll<SVGTextElement, string>('text.count-title').data(countData.length ? [algorithmType === 'variable-window'
         ? '剩余需求 cnt = 目标 − 窗口；负数代表超量，需移动左边界'
         : '对照每种字符：窗口频次是否等于目标频次'] : [])
-        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 34).attr('text-anchor', 'middle')
+        .join('text').attr('class', 'count-title').attr('x', logicalWidth / 2).attr('y', countY - 20).attr('text-anchor', 'middle')
         .attr('fill', '#a0aec0').attr('font-size', '12px').text((d) => d);
       const legendItems = [
         { id: 'window', color: '#315f58', label: '目标 p' },
