@@ -1,8 +1,9 @@
 .container {
   display: flex;
   flex-direction: column;
-  background: #011627;
-  border-radius: 8px;
+  background: #141c18;
+  border: 1px solid #35463e;
+  border-radius: 10px;
   overflow: hidden;
   height: 100%;
 }
@@ -11,34 +12,34 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
-  background: #1d3b53;
-  border-bottom: 1px solid #2d3748;
+  padding: 7px 10px;
+  background: #18221d;
+  border-bottom: 1px solid #35463e;
 }
 
 .tabs {
   display: flex;
-  gap: 4px;
+  gap: 3px;
 }
 
 .tab {
-  padding: 4px 10px;
+  padding: 4px 8px;
   border: none;
   background: transparent;
-  color: #7fdbca;
+  color: #9aaba0;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
-  transition: all 0.2s;
+  font-size: 11px;
 }
 
 .tab:hover {
-  background: rgba(127, 219, 202, 0.1);
+  background: #24312a;
+  color: #edf4f0;
 }
 
 .tab.active {
-  background: #7fdbca;
-  color: #011627;
+  background: #2b5b47;
+  color: #eff8f2;
 }
 
 .codeContainer {
@@ -48,9 +49,9 @@
 
 .pre {
   margin: 0;
-  padding: 12px 0;
-  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
-  font-size: 12px;
+  padding: 10px 0;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
   line-height: 1.6;
   overflow-x: auto;
 }
@@ -58,23 +59,22 @@
 .line {
   display: flex;
   align-items: flex-start;
-  padding: 0 12px;
-  min-height: 20px;
-  transition: background 0.2s;
+  padding: 0 10px;
+  min-height: 18px;
 }
 
 .line.highlighted {
-  background: rgba(255, 203, 107, 0.15);
-  border-left: 3px solid #ffcb6b;
-  padding-left: 9px;
+  background: rgba(224, 181, 87, 0.14);
+  border-left: 2px solid #d8ad50;
+  padding-left: 8px;
 }
 
 .lineNumber {
   display: inline-block;
-  width: 32px;
-  color: #637777;
+  width: 28px;
+  color: #75877c;
   text-align: right;
-  padding-right: 12px;
+  padding-right: 10px;
   user-select: none;
   flex-shrink: 0;
 }
@@ -85,11 +85,11 @@
 }
 
 .variableHint {
-  margin-left: 16px;
-  padding: 2px 8px;
-  background: rgba(130, 170, 255, 0.2);
-  color: #82aaff;
+  margin-left: 12px;
+  padding: 2px 6px;
+  background: rgba(117, 187, 152, 0.14);
+  color: #9bd6b6;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: 10px;
   white-space: nowrap;
 }

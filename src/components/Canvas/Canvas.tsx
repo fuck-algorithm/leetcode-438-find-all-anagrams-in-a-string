@@ -5,7 +5,14 @@ import styles from './Canvas.module.css';
 
 type CharacterDatum = { index: number; char: string };
 type CountDatum = { char: string; count: number; target: number; remaining: number };
-type TeachingArrow = { id: string; fromX: number; fromY: number; toX: number; toY: number; label: string; color: string };
+type TeachingArrow = {
+  id: string;
+  path: string;
+  labelX: number;
+  labelY: number;
+  label: string;
+  color: string;
+};
 
 function getTeachingReason(
   step: NonNullable<ReturnType<typeof useAppStore.getState>['steps'][number]>,
@@ -152,11 +159,11 @@ export function Canvas() {
         .attr('width', charWidth - Math.min(8, charWidth * 0.12)).attr('height', charHeight)
         .attr('fill', (d) => {
           const inWindow = windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right;
-          if (isMatch && inWindow) return '#48bb78';
-          if (highlightIndices.includes(d.index)) return '#ed8936';
-          return inWindow ? '#4299e1' : '#2d3748';
+          if (isMatch && inWindow) return '#287c60';
+          if (highlightIndices.includes(d.index)) return '#c99438';
+          return inWindow ? '#356e5d' : '#26342e';
         })
-        .attr('stroke', (d) => windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right ? '#63b3ed' : '#4a5568')
+        .attr('stroke', (d) => windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right ? '#83c8a9' : '#4b6156')
         .attr('stroke-width', (d) => windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right ? 2 : 1);
       charUpdate.select<SVGTextElement>('.character-text')
         .attr('x', (d) => startX + d.index * charWidth + charWidth / 2 - 1).attr('y', stringY + charHeight / 2 + 5)
@@ -190,8 +197,8 @@ export function Canvas() {
         .attr('y', targetY + charHeight / 2 + 5).text((d) => d.char);
 
       const pointerData = windowState.left < 0 ? [] : [
-        { key: 'left', label: 'L', index: windowState.left, color: '#f6e05e' },
-        { key: 'right', label: 'R', index: windowState.right, color: '#68d391' },
+        { key: 'left', label: '左', index: windowState.left, color: '#e5b85c' },
+        { key: 'right', label: '右', index: windowState.right, color: '#72c8a8' },
       ];
       const pointerJoin = markers.selectAll<SVGGElement, typeof pointerData[number]>('g.pointer')
         .data(pointerData, (d) => d.key);
@@ -233,7 +240,9 @@ export function Canvas() {
       const countUpdate = countEnter.merge(countJoin).attr('transform', (_, i) => `translate(${countStartX + i * countPitch},${countY})`);
       countUpdate.select<SVGTextElement>('.count-char').attr('x', 25).attr('y', 0).text((d) => `'${d.char}'`);
       countUpdate.select<SVGRectElement>('.count-value-bg').attr('y', 10)
-        .attr('fill', (d) => (algorithmType === 'variable-window' ? d.remaining === 0 : d.count === d.target) ? '#48bb78' : '#e53e3e');
+        .attr('fill', (d) => (algorithmType === 'variable-window' ? d.remaining === 0 : d.count === d.target) ? '#287c60' : '#8b5148')
+        .attr('stroke', '#17211d')
+        .attr('stroke-width', 2);
       countUpdate.select<SVGTextElement>('.count-value').attr('x', 12).attr('y', 27)
         .text((d) => algorithmType === 'variable-window' ? d.remaining : d.count);
       countUpdate.select<SVGTextElement>('.count-window-label').attr('x', 12).attr('y', 7)
@@ -244,8 +253,8 @@ export function Canvas() {
       countUpdate.select<SVGTextElement>('.target-label').attr('x', 48).attr('y', 7).text('目标');
       countUpdate.select<SVGTextElement>('.count-status').attr('x', 40).attr('y', 44)
         .attr('fill', (d) => algorithmType === 'variable-window'
-          ? d.remaining < 0 ? '#ff9c9c' : d.remaining === 0 ? '#8fe0b3' : '#f7cf75'
-          : d.count === d.target ? '#8fe0b3' : '#ffb1a8')
+          ? d.remaining < 0 ? '#efaa9c' : d.remaining === 0 ? '#8bd0ae' : '#e9c877'
+          : d.count === d.target ? '#8bd0ae' : '#efaa9c')
         .text((d) => algorithmType === 'variable-window'
           ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
           : d.count === d.target ? '相同'
@@ -265,9 +274,9 @@ export function Canvas() {
         .attr('fill', '#a0aec0').attr('font-size', '12px').text((d) => d);
       const legendItems = [
         { id: 'window', color: '#315f58', label: '目标 p' },
-        { id: 'active', color: '#4299e1', label: '当前窗口' },
-        { id: 'current', color: '#ed8936', label: '本步字符' },
-        { id: 'match', color: '#48bb78', label: '匹配成功' },
+        { id: 'active', color: '#356e5d', label: '当前窗口' },
+        { id: 'current', color: '#c99438', label: '本步字符' },
+        { id: 'match', color: '#287c60', label: '匹配成功' },
       ];
       const legendStartX = logicalWidth / 2 - 172;
       const legend = annotations.selectAll<SVGGElement, typeof legendItems[number]>('g.canvas-legend-item')
@@ -296,25 +305,33 @@ export function Canvas() {
       const dataArrow: TeachingArrow[] = change && ['enter', 'shrink'].includes(teaching.operation)
         ? [{
             id: 'teaching-data-flow',
-            fromX: startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2,
-            fromY: teaching.operation === 'enter' ? stringY + charHeight : countY - 24,
-            toX: countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12,
-            toY: teaching.operation === 'enter' ? countY - 8 : stringY + charHeight,
-            label: teaching.operation === 'enter'
-              ? `入窗 s[${teaching.focus?.index ?? '?'}]='${change.char}' 计数 ${change.before}→${change.after}`
-              : `出窗 s[${teaching.focus?.index ?? '?'}]='${change.char}' 计数 ${change.before}→${change.after}`,
-            color: teaching.operation === 'enter' ? '#68d391' : '#f6ad55',
+            path: (() => {
+              const fromX = startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2;
+              const fromY = teaching.operation === 'enter' ? stringY + charHeight + 8 : countY - 24;
+              const toX = countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12;
+              const toY = teaching.operation === 'enter' ? countY - 8 : stringY + charHeight + 8;
+              const bend = Math.max(34, Math.min(86, Math.abs(toX - fromX) * 0.22));
+              const direction = teaching.operation === 'enter' ? 1 : -1;
+              return `M ${fromX} ${fromY} C ${fromX} ${fromY + bend * direction}, ${toX} ${toY - bend * direction}, ${toX} ${toY}`;
+            })(),
+            labelX: (startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2 + countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12) / 2,
+            labelY: teaching.operation === 'enter' ? (stringY + charHeight + countY) / 2 + 22 : (countY + stringY + charHeight) / 2 - 22,
+            label: teaching.operation === 'enter' ? '字符入窗 · 计数更新' : '字符出窗 · 计数更新',
+            color: teaching.operation === 'enter' ? '#72c8a8' : '#e5b85c',
           }]
         : [];
       const arrowJoin = annotations.selectAll<SVGGElement, TeachingArrow>('g.teaching-arrow').data(dataArrow, (d) => d.id);
       arrowJoin.exit().remove();
       const arrowEnter = arrowJoin.enter().append('g').attr('class', 'teaching-arrow');
-      arrowEnter.append('line').attr('stroke-width', 2).attr('marker-end', 'url(#teaching-arrowhead)');
-      arrowEnter.append('text').attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 'bold');
+      arrowEnter.append('path').attr('class', 'teaching-arrow-shadow').attr('fill', 'none').attr('stroke-width', 6);
+      arrowEnter.append('path').attr('class', 'teaching-arrow-line').attr('fill', 'none')
+        .attr('stroke-width', 2).attr('marker-end', 'url(#teaching-arrowhead)');
+      arrowEnter.append('text').attr('class', 'teaching-arrow-label').attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 'bold');
       const arrowUpdate = arrowEnter.merge(arrowJoin);
-      arrowUpdate.select('line').attr('x1', (d) => d.fromX).attr('y1', (d) => d.fromY)
-        .attr('x2', (d) => d.toX).attr('y2', (d) => d.toY).attr('stroke', (d) => d.color);
-      arrowUpdate.select('text').attr('x', (d) => (d.fromX + d.toX) / 2).attr('y', (d) => (d.fromY + d.toY) / 2 - 6)
+      arrowUpdate.select('.teaching-arrow-shadow').attr('d', (d) => d.path).attr('stroke', (d) => d.color).attr('opacity', 0.14);
+      arrowUpdate.select('.teaching-arrow-line').attr('d', (d) => d.path).attr('stroke', (d) => d.color)
+        .attr('stroke-dasharray', '5 5').attr('stroke-linecap', 'round');
+      arrowUpdate.select('text.teaching-arrow-label').attr('x', (d) => d.labelX).attr('y', (d) => d.labelY)
         .attr('fill', (d) => d.color).text((d) => d.label);
       annotations.selectAll<SVGTextElement, string>('text.teaching-decision').data([])
         .join('text').attr('class', 'teaching-decision');

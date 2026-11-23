@@ -23,11 +23,11 @@ function App() {
       <DataInput />
       
       <div className="main-content">
-        <div className="code-section">
-          <CodePanel />
-        </div>
         <div className="canvas-section">
           <Canvas />
+        </div>
+        <div className="code-section">
+          <CodePanel />
         </div>
       </div>
 

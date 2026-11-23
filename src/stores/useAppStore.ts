@@ -77,9 +77,10 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // 初始化
   initialize: async () => {
+    // Render the first algorithm frame immediately; settings may require an async IndexedDB open.
+    get().generateSteps();
     const language = await getSetting<ProgrammingLanguage>('language', 'python');
     const speed = await getSetting<number>('speed', 1);
     set({ language, speed });
-    get().generateSteps();
   },
 }));

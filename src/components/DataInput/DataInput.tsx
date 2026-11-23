@@ -47,46 +47,48 @@ export function DataInput() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.algorithmSelector}>
-        <span className={styles.label}>解法：</span>
-        <button
-          className={`${styles.algorithmBtn} ${algorithmType === 'fixed-window' ? styles.active : ''}`}
-          onClick={() => handleAlgorithmChange('fixed-window')}
-        >
-          定长滑窗
-        </button>
-        <button
-          className={`${styles.algorithmBtn} ${algorithmType === 'variable-window' ? styles.active : ''}`}
-          onClick={() => handleAlgorithmChange('variable-window')}
-        >
-          不定长滑窗
-        </button>
-      </div>
+      <div className={styles.toolbar}>
+        <div className={styles.algorithmSelector}>
+          <span className={styles.label}>解法</span>
+          <button
+            className={`${styles.algorithmBtn} ${algorithmType === 'fixed-window' ? styles.active : ''}`}
+            onClick={() => handleAlgorithmChange('fixed-window')}
+          >
+            定长
+          </button>
+          <button
+            className={`${styles.algorithmBtn} ${algorithmType === 'variable-window' ? styles.active : ''}`}
+            onClick={() => handleAlgorithmChange('variable-window')}
+          >
+            不定长
+          </button>
+        </div>
 
-      <div className={styles.inputRow}>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>s =</label>
-          <input
-            type="text"
-            value={tempS}
-            onChange={(e) => setTempS(e.target.value)}
-            className={styles.input}
-            placeholder="输入字符串 s"
-          />
+        <div className={styles.inputRow}>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>s =</label>
+            <input
+              type="text"
+              value={tempS}
+              onChange={(e) => setTempS(e.target.value)}
+              className={styles.input}
+              placeholder="输入字符串 s"
+            />
+          </div>
+          <div className={styles.inputGroup}>
+            <label className={styles.label}>p =</label>
+            <input
+              type="text"
+              value={tempP}
+              onChange={(e) => setTempP(e.target.value)}
+              className={styles.input}
+              placeholder="输入字符串 p"
+            />
+          </div>
+          <button className={styles.applyBtn} onClick={handleApply}>
+            应用
+          </button>
         </div>
-        <div className={styles.inputGroup}>
-          <label className={styles.label}>p =</label>
-          <input
-            type="text"
-            value={tempP}
-            onChange={(e) => setTempP(e.target.value)}
-            className={styles.input}
-            placeholder="输入字符串 p"
-          />
-        </div>
-        <button className={styles.applyBtn} onClick={handleApply}>
-          应用
-        </button>
       </div>
 
       {error && <div className={styles.error}>{error}</div>}
