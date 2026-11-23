@@ -310,12 +310,14 @@ export function Canvas() {
               const fromY = teaching.operation === 'enter' ? stringY + charHeight + 8 : countY - 24;
               const toX = countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12;
               const toY = teaching.operation === 'enter' ? countY - 8 : stringY + charHeight + 8;
-              const bend = Math.max(34, Math.min(86, Math.abs(toX - fromX) * 0.22));
-              const direction = teaching.operation === 'enter' ? 1 : -1;
-              return `M ${fromX} ${fromY} C ${fromX} ${fromY + bend * direction}, ${toX} ${toY - bend * direction}, ${toX} ${toY}`;
+              const bend = Math.min(150, Math.max(96, Math.abs(toY - fromY) * 0.58));
+              const controlY = Math.min(fromY, toY) - bend;
+              const controlOneX = fromX + (toX - fromX) * 0.28;
+              const controlTwoX = fromX + (toX - fromX) * 0.72;
+              return `M ${fromX} ${fromY} C ${controlOneX} ${controlY}, ${controlTwoX} ${controlY}, ${toX} ${toY}`;
             })(),
             labelX: (startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2 + countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12) / 2,
-            labelY: teaching.operation === 'enter' ? (stringY + charHeight + countY) / 2 + 22 : (countY + stringY + charHeight) / 2 - 22,
+            labelY: Math.min(stringY + charHeight, countY) - Math.min(150, Math.max(96, Math.abs(countY - stringY - charHeight) * 0.58)) - 14,
             label: teaching.operation === 'enter' ? '字符入窗 · 计数更新' : '字符出窗 · 计数更新',
             color: teaching.operation === 'enter' ? '#72c8a8' : '#e5b85c',
           }]
