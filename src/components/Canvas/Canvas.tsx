@@ -8,6 +8,8 @@ type CountDatum = { char: string; count: number; target: number; remaining: numb
 type TeachingArrow = {
   id: string;
   path: string;
+  sourceX: number;
+  sourceY: number;
   labelX: number;
   labelY: number;
   label: string;
@@ -134,9 +136,9 @@ export function Canvas() {
       const contentBottom = Math.min(logicalHeight - 76, logicalHeight * 0.94);
       const contentHeight = Math.max(320, contentBottom - contentTop);
       const stringY = contentTop + contentHeight * 0.1;
-      const windowY = stringY + charHeight + contentHeight * 0.12;
-      const targetY = contentTop + contentHeight * 0.42;
-      const countY = targetY + charHeight + 84;
+      const windowY = stringY + charHeight + contentHeight * 0.08;
+      const countY = stringY + charHeight + contentHeight * 0.3;
+      const targetY = countY + Math.max(144, contentHeight * 0.32);
       const { windowState, highlightIndices, isMatch, charCount, targetCount, teaching } = currentStepData;
 
       if (resetView) {
@@ -306,30 +308,37 @@ export function Canvas() {
         ? [{
             id: 'teaching-data-flow',
             path: (() => {
-              const fromX = startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2;
-              const fromY = teaching.operation === 'enter' ? stringY + charHeight + 8 : countY - 24;
-              const toX = countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12;
-              const toY = teaching.operation === 'enter' ? countY - 8 : stringY + charHeight + 8;
-              const bend = Math.min(150, Math.max(96, Math.abs(toY - fromY) * 0.58));
-              const controlY = Math.min(fromY, toY) - bend;
-              const controlOneX = fromX + (toX - fromX) * 0.28;
-              const controlTwoX = fromX + (toX - fromX) * 0.72;
-              return `M ${fromX} ${fromY} C ${controlOneX} ${controlY}, ${controlTwoX} ${controlY}, ${toX} ${toY}`;
+              const charX = startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2 - 1;
+              const countX = countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12;
+              const fromX = teaching.operation === 'enter' ? charX : countX;
+              const toX = teaching.operation === 'enter' ? countX : charX;
+              const fromY = teaching.operation === 'enter' ? stringY + charHeight + 5 : countY + 10;
+              const toY = teaching.operation === 'enter' ? countY + 10 : stringY + charHeight + 5;
+              const routeY = countY + 4;
+              const controlOffset = teaching.operation === 'enter' ? 48 : -48;
+              return `M ${fromX} ${fromY} C ${fromX} ${routeY + controlOffset}, ${toX} ${routeY + controlOffset}, ${toX} ${toY}`;
             })(),
-            labelX: (startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2 + countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12) / 2,
-            labelY: Math.min(stringY + charHeight, countY) - Math.min(150, Math.max(96, Math.abs(countY - stringY - charHeight) * 0.58)) - 14,
-            label: teaching.operation === 'enter' ? '字符入窗 · 计数更新' : '字符出窗 · 计数更新',
+            sourceX: teaching.operation === 'enter'
+              ? startX + (teaching.focus?.index ?? windowState.left) * charWidth + charWidth / 2 - 1
+              : countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 12,
+            sourceY: teaching.operation === 'enter' ? stringY + charHeight + 5 : countY + 10,
+            labelX: countStartX + Math.max(0, countData.findIndex((item) => item.char === change.char)) * countPitch + 40,
+            labelY: countY + 62,
+            label: `${change.char}: ${change.before}→${change.after}`,
             color: teaching.operation === 'enter' ? '#72c8a8' : '#e5b85c',
           }]
         : [];
       const arrowJoin = annotations.selectAll<SVGGElement, TeachingArrow>('g.teaching-arrow').data(dataArrow, (d) => d.id);
       arrowJoin.exit().remove();
       const arrowEnter = arrowJoin.enter().append('g').attr('class', 'teaching-arrow');
+      arrowEnter.append('circle').attr('class', 'teaching-arrow-origin').attr('r', 4);
       arrowEnter.append('path').attr('class', 'teaching-arrow-shadow').attr('fill', 'none').attr('stroke-width', 6);
       arrowEnter.append('path').attr('class', 'teaching-arrow-line').attr('fill', 'none')
-        .attr('stroke-width', 2).attr('marker-end', 'url(#teaching-arrowhead)');
+        .attr('stroke-width', 2.5).attr('marker-end', 'url(#teaching-arrowhead)');
       arrowEnter.append('text').attr('class', 'teaching-arrow-label').attr('text-anchor', 'middle').attr('font-size', 11).attr('font-weight', 'bold');
       const arrowUpdate = arrowEnter.merge(arrowJoin);
+      arrowUpdate.select('.teaching-arrow-origin').attr('cx', (d) => d.sourceX).attr('cy', (d) => d.sourceY)
+        .attr('fill', (d) => d.color).attr('stroke', '#17211d').attr('stroke-width', 2);
       arrowUpdate.select('.teaching-arrow-shadow').attr('d', (d) => d.path).attr('stroke', (d) => d.color).attr('opacity', 0.14);
       arrowUpdate.select('.teaching-arrow-line').attr('d', (d) => d.path).attr('stroke', (d) => d.color)
         .attr('stroke-dasharray', '5 5').attr('stroke-linecap', 'round');
