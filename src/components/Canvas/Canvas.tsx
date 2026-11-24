@@ -5,6 +5,13 @@ import styles from './Canvas.module.css';
 
 type CharacterDatum = { index: number; char: string };
 type CountDatum = { char: string; count: number; target: number; remaining: number };
+
+const CANVAS_WIDTH = 1200;
+const CANVAS_HEIGHT = 680;
+const COUNT_COLUMNS = 7;
+const COUNT_COLUMN_PITCH = 88;
+const COUNT_ROW_PITCH = 94;
+const COUNT_CARD_WIDTH = 76;
 function getTeachingReason(
   step: NonNullable<ReturnType<typeof useAppStore.getState>['steps'][number]>,
   algorithmType: 'fixed-window' | 'variable-window',
@@ -80,17 +87,13 @@ export function Canvas() {
 
     stateRef.current = { inputData, currentStepData, algorithmType };
     const svg = d3.select(svgElement);
-    svg.append('defs').append('marker').attr('id', 'teaching-arrowhead')
-      .attr('viewBox', '0 0 10 10').attr('refX', 8).attr('refY', 5)
-      .attr('markerWidth', 6).attr('markerHeight', 6).attr('orient', 'auto-start-reverse')
-      .append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z').attr('fill', 'context-stroke');
     const root = svg.append('g').attr('class', 'main-group');
     const characters = root.append('g').attr('class', 'character-layer');
     const markers = root.append('g').attr('class', 'marker-layer');
     const counts = root.append('g').attr('class', 'count-layer');
     const annotations = root.append('g').attr('class', 'annotation-layer');
     const zoom = d3.zoom<SVGSVGElement, unknown>()
-      .scaleExtent([0.01, 3])
+      .scaleExtent([0.6, 3])
       .on('zoom', (event) => root.attr('transform', event.transform.toString()));
     svg.call(zoom);
 
@@ -106,35 +109,32 @@ export function Canvas() {
       width = container.clientWidth;
       height = container.clientHeight;
       if (!width || !height) return;
-      svg.attr('viewBox', `0 0 ${width} ${height}`).attr('preserveAspectRatio', 'none');
-
       const { s, p } = inputData;
       const charHeight = 40;
-      const countChars = [...new Set([...Object.keys(currentStepData.charCount), ...Object.keys(currentStepData.targetCount)])].sort();
-      const countPitch = 128;
-      const characterCount = Math.max(s.length, p.length, 1);
-      const contentWidth = Math.max(characterCount * 76 + 64, countChars.length * countPitch + 64, 360);
-      const fitScale = Math.min(1, (width - 24) / contentWidth, (height - 32) / 520);
-      const scale = Math.max(0.01, fitScale);
-      const logicalWidth = width / scale;
-      const logicalHeight = height / scale;
-      const desiredCharPitch = 76;
-      const charWidth = Math.max(1, Math.min(96, desiredCharPitch, (logicalWidth - 64) / characterCount));
-      const startX = (logicalWidth - s.length * charWidth) / 2;
-      const contentTop = Math.max(36, logicalHeight * 0.1);
-      const contentBottom = Math.min(logicalHeight - 76, logicalHeight * 0.94);
-      const contentHeight = Math.max(320, contentBottom - contentTop);
-      const stringY = contentTop + contentHeight * 0.1;
-      const windowY = stringY + charHeight + contentHeight * 0.08;
-      const countY = stringY + charHeight + contentHeight * 0.3;
-      const targetY = countY + Math.max(144, contentHeight * 0.32);
+      const countChars = [...new Set([...s, ...p])].sort();
+      const contentWidth = Math.max(CANVAS_WIDTH, s.length * 76 + 160, p.length * 76 + 160);
+      const countColumns = Math.min(COUNT_COLUMNS, Math.max(1, countChars.length));
+      const rowCount = Math.max(1, Math.ceil(countChars.length / countColumns));
+      const logicalWidth = Math.max(contentWidth, countColumns * COUNT_COLUMN_PITCH + 120);
+      const stringY = 176;
+      const windowY = 246;
+      const countY = 344;
+      const countSectionBottom = countY + (rowCount - 1) * COUNT_ROW_PITCH + 96;
+      const resultsY = countSectionBottom + 40;
+      const targetY = Math.max(630, resultsY + 58);
+      const logicalHeight = Math.max(CANVAS_HEIGHT, targetY + charHeight + 110);
+      svg.attr('viewBox', `0 0 ${logicalWidth} ${logicalHeight}`).attr('preserveAspectRatio', 'xMidYMid meet');
+      root.attr('transform', `translate(${(CANVAS_WIDTH - logicalWidth) / 2}, 0)`);
+      const charPitch = 76;
+      const charWidth = charPitch - 8;
+      const startX = Math.max(96, (logicalWidth - s.length * charPitch) / 2 + 4);
       const { windowState, highlightIndices, isMatch, charCount, targetCount, teaching } = currentStepData;
       const countChange = teaching.countChange && ['enter', 'shrink'].includes(teaching.operation)
         ? teaching.countChange
         : null;
 
       if (resetView) {
-        svg.call(zoom.transform, d3.zoomIdentity.translate((width - logicalWidth * scale) / 2, 0).scale(scale));
+        svg.call(zoom.transform, d3.zoomIdentity);
       }
 
       const chars: CharacterDatum[] = Array.from(s, (char, index) => ({ char, index }));
@@ -223,45 +223,57 @@ export function Canvas() {
         target: targetCount[char] || 0,
         remaining: charCount[char] || 0,
       }));
-      const countStartX = (logicalWidth - Math.max(0, countData.length - 1) * countPitch) / 2 - 50;
+      const comparedChar = teaching.operation === 'compare' && !isMatch
+        ? countData.find((item) => algorithmType === 'variable-window' ? item.remaining < 0 : item.count !== item.target)?.char ?? null
+        : null;
+      const focusedCountChar = countChange?.char ?? comparedChar;
+      const countStartX = (logicalWidth - (countColumns - 1) * COUNT_COLUMN_PITCH) / 2 - COUNT_CARD_WIDTH / 2;
+      const countPitch = COUNT_COLUMN_PITCH;
       const countJoin = counts.selectAll<SVGGElement, CountDatum>('g.count-card').data(countData, (d) => d.char);
       countJoin.exit().remove();
       const countEnter = countJoin.enter().append('g').attr('class', 'count-card');
-      countEnter.append('rect').attr('class', 'count-focus-ring').attr('x', -5).attr('y', -8).attr('width', 82).attr('height', 62)
-        .attr('rx', 8).attr('fill', 'none').attr('stroke', 'none').attr('stroke-width', 2);
+      countEnter.append('rect').attr('class', 'count-focus-ring').attr('x', -5).attr('y', -5)
+        .attr('width', COUNT_CARD_WIDTH + 10).attr('height', 76).attr('rx', 8)
+        .attr('fill', 'none').attr('stroke', 'none').attr('stroke-width', 2);
+      countEnter.append('text').attr('class', 'count-char').attr('text-anchor', 'middle')
+        .attr('font-size', '14px').attr('font-weight', 'bold').attr('fill', '#f7fafc');
+      countEnter.append('text').attr('class', 'count-char-caption').attr('text-anchor', 'middle')
+        .attr('font-size', '9px').attr('fill', '#9aaba0');
+      countEnter.append('text').attr('class', 'count-window-label').attr('text-anchor', 'middle')
+        .attr('font-size', '9px').attr('fill', '#a0aec0');
+      countEnter.append('rect').attr('class', 'count-value-bg').attr('rx', 4).attr('opacity', 0.9);
+      countEnter.append('text').attr('class', 'count-value').attr('text-anchor', 'middle').attr('fill', '#fff').attr('font-size', '12px');
+      countEnter.append('text').attr('class', 'count-vs').attr('text-anchor', 'middle').attr('fill', '#718096').attr('font-size', '10px').text('→');
+      countEnter.append('text').attr('class', 'target-label').attr('text-anchor', 'middle')
+        .attr('font-size', '9px').attr('fill', '#a0aec0');
+      countEnter.append('rect').attr('class', 'target-value-bg').attr('x', 48).attr('rx', 4).attr('fill', '#4a5568');
+      countEnter.append('text').attr('class', 'target-value').attr('text-anchor', 'middle').attr('fill', '#f7fafc').attr('font-size', '12px');
+      countEnter.append('text').attr('class', 'count-status').attr('text-anchor', 'middle').attr('fill', '#a0aec0').attr('font-size', '9px');
       countEnter.append('text').attr('class', 'count-change-label').attr('text-anchor', 'middle')
         .attr('font-size', '10px').attr('font-weight', 'bold');
-      countEnter.append('text').attr('class', 'count-char').attr('text-anchor', 'middle').attr('font-size', '14px').attr('font-weight', 'bold').attr('fill', '#f7fafc');
-      countEnter.append('rect').attr('class', 'count-value-bg').attr('width', 24).attr('height', 24).attr('rx', 4).attr('opacity', 0.8);
-      countEnter.append('text').attr('class', 'count-value').attr('text-anchor', 'middle').attr('fill', '#fff').attr('font-size', '12px');
-      countEnter.append('text').attr('class', 'count-window-label').attr('text-anchor', 'middle').attr('fill', '#a0aec0').attr('font-size', '8px');
-      countEnter.append('text').attr('class', 'count-vs').attr('text-anchor', 'middle').attr('fill', '#718096').attr('font-size', '10px').text('vs');
-      countEnter.append('rect').attr('class', 'target-value-bg').attr('x', 48).attr('width', 24).attr('height', 24).attr('rx', 4).attr('fill', '#4a5568');
-      countEnter.append('text').attr('class', 'target-value').attr('text-anchor', 'middle').attr('fill', '#f7fafc').attr('font-size', '12px');
-      countEnter.append('text').attr('class', 'target-label').attr('text-anchor', 'middle').attr('fill', '#a0aec0').attr('font-size', '8px');
-      countEnter.append('text').attr('class', 'count-status').attr('text-anchor', 'middle').attr('fill', '#a0aec0').attr('font-size', '9px');
-      const countUpdate = countEnter.merge(countJoin).attr('transform', (_, i) => `translate(${countStartX + i * countPitch},${countY})`);
+      const countUpdate = countEnter.merge(countJoin).attr('transform', (_, i) => {
+        const column = i % countColumns;
+        const row = Math.floor(i / countColumns);
+        return `translate(${countStartX + column * countPitch},${countY + row * COUNT_ROW_PITCH})`;
+      });
       countUpdate.select<SVGRectElement>('.count-focus-ring')
-        .attr('stroke', (d) => countChange?.char === d.char ? '#e5b85c' : 'none')
-        .attr('opacity', (d) => countChange?.char === d.char ? 1 : 0);
-      countUpdate.select<SVGTextElement>('.count-change-label')
-        .attr('x', 36).attr('y', 76)
-        .attr('fill', (d) => countChange?.char === d.char ? '#f0ce7a' : 'none')
-        .text((d) => countChange?.char === d.char ? `${d.char}: ${countChange.before} → ${countChange.after}` : '');
-      countUpdate.select<SVGTextElement>('.count-char').attr('x', 25).attr('y', 0).text((d) => `'${d.char}'`);
-      countUpdate.select<SVGRectElement>('.count-value-bg').attr('y', 10)
-        .attr('fill', (d) => (algorithmType === 'variable-window' ? d.remaining === 0 : d.count === d.target) ? '#287c60' : '#8b5148')
-        .attr('stroke', '#17211d')
-        .attr('stroke-width', 2);
-      countUpdate.select<SVGTextElement>('.count-value').attr('x', 12).attr('y', 27)
-        .text((d) => algorithmType === 'variable-window' ? d.remaining : d.count);
-      countUpdate.select<SVGTextElement>('.count-window-label').attr('x', 12).attr('y', 7)
+        .attr('stroke', (d) => focusedCountChar === d.char ? '#e5b85c' : 'none')
+        .attr('opacity', (d) => focusedCountChar === d.char ? 1 : 0);
+      countUpdate.select<SVGTextElement>('.count-char').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 8).text((d) => `'${d.char}'`);
+      countUpdate.select<SVGTextElement>('.count-char-caption').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 19)
+        .text((d) => countChange?.char === d.char ? '当前字符' : '字符');
+      countUpdate.select<SVGTextElement>('.count-window-label').attr('x', 12).attr('y', 34)
         .text(() => algorithmType === 'variable-window' ? '剩余' : '窗口');
-      countUpdate.select<SVGTextElement>('.count-vs').attr('x', 40).attr('y', 27);
-      countUpdate.select<SVGRectElement>('.target-value-bg').attr('y', 10);
-      countUpdate.select<SVGTextElement>('.target-value').attr('x', 48).attr('y', 27).text((d) => d.target);
-      countUpdate.select<SVGTextElement>('.target-label').attr('x', 48).attr('y', 7).text('目标');
-      countUpdate.select<SVGTextElement>('.count-status').attr('x', 40).attr('y', 44)
+      countUpdate.select<SVGRectElement>('.count-value-bg').attr('x', 0).attr('y', 38).attr('width', 26).attr('height', 24)
+        .attr('fill', (d) => (algorithmType === 'variable-window' ? d.remaining === 0 : d.count === d.target) ? '#287c60' : '#8b5148')
+        .attr('stroke', '#17211d').attr('stroke-width', 2);
+      countUpdate.select<SVGTextElement>('.count-value').attr('x', 13).attr('y', 54)
+        .text((d) => algorithmType === 'variable-window' ? d.remaining : d.count);
+      countUpdate.select<SVGTextElement>('.count-vs').attr('x', 39).attr('y', 54);
+      countUpdate.select<SVGTextElement>('.target-label').attr('x', 60).attr('y', 34).text('目标');
+      countUpdate.select<SVGRectElement>('.target-value-bg').attr('x', 48).attr('y', 38).attr('width', 26).attr('height', 24);
+      countUpdate.select<SVGTextElement>('.target-value').attr('x', 61).attr('y', 54).text((d) => d.target);
+      countUpdate.select<SVGTextElement>('.count-status').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 73)
         .attr('fill', (d) => algorithmType === 'variable-window'
           ? d.remaining < 0 ? '#efaa9c' : d.remaining === 0 ? '#8bd0ae' : '#e9c877'
           : d.count === d.target ? '#8bd0ae' : '#efaa9c')
@@ -269,6 +281,13 @@ export function Canvas() {
           ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
           : d.count === d.target ? '相同'
             : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`);
+      countUpdate.select<SVGTextElement>('.count-change-label').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 91)
+        .attr('fill', (d) => countChange?.char === d.char ? '#f0ce7a' : 'none')
+        .text((d) => countChange?.char === d.char ? `${countChange.before} → ${countChange.after}`
+          : comparedChar === d.char ? algorithmType === 'variable-window'
+            ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
+            : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`
+          : '');
 
       const title = '按顺序读入字符 → 检查频次 → 命中记下起点 → 窗口右移';
       annotations.selectAll<SVGTextElement, string>('text.canvas-title').data([title]).join('text')
@@ -295,14 +314,14 @@ export function Canvas() {
       const legendEnter = legend.enter().append('g').attr('class', 'canvas-legend-item');
       legendEnter.append('rect').attr('width', 12).attr('height', 12).attr('rx', 3);
       legendEnter.append('text').attr('x', 17).attr('y', 10).attr('fill', '#cbd5e0').attr('font-size', '10px');
-      legendEnter.merge(legend).attr('transform', (_, i) => `translate(${legendStartX + i * 88},${height / scale - 32})`)
+      legendEnter.merge(legend).attr('transform', (_, i) => `translate(${legendStartX + i * 88},${logicalHeight - 44})`)
         .select('rect').attr('fill', (d) => d.color);
       legendEnter.merge(legend).select<SVGTextElement>('text').text((d) => d.label);
       annotations.selectAll<SVGTextElement, string>('text.count-explanation').data([])
         .join('text').attr('class', 'count-explanation');
       annotations.selectAll<SVGTextElement, string>('text.results-label')
         .data([`已找到的起点索引：${currentStepData.results.length ? `[${currentStepData.results.join(', ')}]` : '暂无'}`])
-        .join('text').attr('class', 'results-label').attr('x', logicalWidth / 2).attr('y', countY + 104)
+        .join('text').attr('class', 'results-label').attr('x', logicalWidth / 2).attr('y', resultsY)
         .attr('text-anchor', 'middle').attr('fill', '#86d7bf').attr('font-size', '12px').text((d) => d);
       annotations.selectAll<SVGTextElement, string>('text.step-description').data([])
         .join('text').attr('class', 'step-description');
@@ -311,7 +330,6 @@ export function Canvas() {
       annotations.selectAll<SVGTextElement, string>('text.count-change').data([])
         .join('text').attr('class', 'count-change');
 
-      annotations.selectAll<SVGGElement, unknown>('g.teaching-arrow').remove();
       annotations.selectAll<SVGTextElement, string>('text.teaching-decision').data([])
         .join('text').attr('class', 'teaching-decision');
     };
@@ -323,7 +341,7 @@ export function Canvas() {
       draw(inputChanged);
     };
     render();
-    const observer = new ResizeObserver(() => draw(false));
+    const observer = new ResizeObserver(() => draw(true));
     observer.observe(container);
     return () => {
       observer.disconnect();
