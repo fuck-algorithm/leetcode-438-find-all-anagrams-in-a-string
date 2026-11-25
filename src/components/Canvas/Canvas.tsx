@@ -22,8 +22,8 @@ function getTeachingReason(
 
   if (teaching.operation === 'init') {
     return algorithmType === 'fixed-window'
-      ? `目标 p 长 ${Object.values(targetCount).reduce((sum, count) => sum + count, 0)}；后续只比较同长度窗口的字符频次。`
-      : 'cnt = 目标频次 − 窗口频次；cnt < 0 表示该字符在窗口里超量，需要从左侧移出。';
+      ? `先数清 p 里每种字符：接下来只检查长度为 ${Object.values(targetCount).reduce((sum, count) => sum + count, 0)} 的窗口。`
+      : '先记住 p 需要哪些字符、各要几个。窗口里每读入一个字符，就把它的剩余需求减一。';
   }
 
   if (teaching.operation === 'enter' && teaching.focus) {
@@ -37,14 +37,14 @@ function getTeachingReason(
           : `cnt['${char}']=${remaining}，窗口中的 '${char}' 还缺 ${remaining} 个；当前无需收缩。`;
     }
     return windowLength < Object.values(targetCount).reduce((sum, count) => sum + count, 0)
-      ? `窗口长度 ${windowLength} 尚未达到目标长度；先继续读入字符，长度足够后再比较频次。`
-      : `窗口长度已达到目标长度；现在逐字符比较窗口频次与目标频次。`;
+      ? `窗口现在有 ${windowLength} 个字符，还差 ${Object.values(targetCount).reduce((sum, count) => sum + count, 0) - windowLength} 个才够长；先继续读，暂不比较频次。`
+      : `窗口已满 ${windowLength} 个字符；现在逐个核对窗口频次和目标频次。`;
   }
 
   if (teaching.operation === 'shrink') {
-    if (algorithmType === 'variable-window') return teaching.decision?.reason ?? '移出左端字符，直到当前字符不再超出目标频次。';
+    if (algorithmType === 'variable-window') return teaching.decision?.reason ?? '左侧字符离开窗口；重复这个动作直到每种字符都不再超量。';
     const removedChar = teaching.countChange?.char;
-    return `固定窗口向右滑动，移出左端 '${removedChar ?? '?'}'，为下一轮比较腾出位置。`;
+    return `窗口已满：移出最左边的 '${removedChar ?? '?'}'，下一步才能读入新字符而保持长度不变。`;
   }
 
   if (teaching.operation === 'compare' || teaching.operation === 'match') {
@@ -60,10 +60,10 @@ function getTeachingReason(
       .map((char) => ({ char, delta: (charCount[char] || 0) - (targetCount[char] || 0) }))
       .find(({ delta }) => delta !== 0);
     return teaching.operation === 'match'
-      ? '每种字符的窗口频次都与目标频次相等；字符顺序虽可不同，这个窗口仍是异位词。'
+      ? `窗口 “${windowContent}” 和 p 含有相同的字符次数；顺序不同也没关系，记录起点 ${left}。`
       : difference
-        ? `频次还不相等：'${difference.char}' 在窗口中${difference.delta > 0 ? `多 ${difference.delta} 个` : `少 ${Math.abs(difference.delta)} 个`}；这个窗口不能记录。`
-        : `窗口内容为 “${windowContent}”；继续检查下一段固定长度窗口。`;
+        ? `这个窗口还不是答案：字符 '${difference.char}' 在窗口里${difference.delta > 0 ? `多 ${difference.delta} 个` : `少 ${Math.abs(difference.delta)} 个`}。`
+        : `窗口 “${windowContent}” 的频次吻合，记录起点 ${left}。`;
   }
 
   if (teaching.operation === 'done') {
@@ -73,19 +73,62 @@ function getTeachingReason(
   return '沿用当前窗口状态，继续处理下一个字符。';
 }
 
+function getNextAction(
+  step: NonNullable<ReturnType<typeof useAppStore.getState>['steps'][number]>,
+  algorithmType: 'fixed-window' | 'variable-window',
+  inputData: { s: string; p: string },
+): string {
+  const { teaching, windowState } = step;
+  const { s, p } = inputData;
+  const nextIndex = windowState.right + 1;
+  const windowLength = windowState.left < 0 ? 0 : windowState.right - windowState.left + 1;
+
+  if (teaching.operation === 'done' || nextIndex >= s.length && teaching.operation !== 'shrink') {
+    return '扫描结束，查看最终索引。';
+  }
+  if (algorithmType === 'fixed-window') {
+    if (teaching.operation === 'init') return `从 s[0] 开始读入；窗口长度目标是 ${p.length}，凑满之前不判断。`;
+    if (teaching.operation === 'enter' && windowLength < p.length) return windowLength === p.length - 1
+      ? `这是最后一个待填位置 s[${step.windowState.right}]；下一步窗口凑满，开始比较频次。`
+      : `继续读入 s[${nextIndex}]；还需 ${p.length - windowLength} 个字符凑满窗口。`;
+    if (teaching.operation === 'enter') return '窗口已凑满。下一步逐字符比较窗口频次和目标频次。';
+    if (teaching.operation === 'compare' || teaching.operation === 'match') return teaching.operation === 'match'
+      ? `频次相同，答案记下起点 ${windowState.left}。下一步移出最左字符，准备滑到右边一格。`
+      : '频次不同，不记录答案。下一步移出最左字符，准备检查下一个窗口。';
+    if (teaching.operation === 'shrink') return nextIndex < s.length
+      ? `左端已移走。下一步读入 s[${nextIndex}]，窗口整体右移一格。`
+      : '左端已移走；所有字符都检查完，返回已记录的索引。';
+  } else {
+    if (teaching.operation === 'init') return '先建好 p 的剩余需求；下一步从 s[0] 开始扩展窗口。';
+    if (teaching.operation === 'enter' && teaching.focus && (step.charCount[teaching.focus.char] ?? 0) < 0) return `读入的 '${teaching.focus.char}' 已超出需求；下一步移出左边界，直到它不再超量。`;
+    if (teaching.operation === 'enter' || teaching.operation === 'shrink') {
+      const stillExcess = Object.values(step.charCount).some((count) => count < 0);
+      if (stillExcess) return '移出后仍有字符超量；下一步继续右移左边界。';
+      return windowLength === p.length
+        ? `窗口合法且长度刚好是 ${p.length}；下一步记录起点 ${windowState.left}。`
+        : `窗口已合法但长度是 ${windowLength}，还没凑满 ${p.length}；下一步继续向右扩展。`;
+    }
+    if (teaching.operation === 'compare' || teaching.operation === 'match') return teaching.operation === 'match'
+      ? `记录起点 ${windowState.left}。下一步读入 s[${nextIndex}]，继续扫描。`
+      : `窗口长度 ${windowLength} 还不等于 ${p.length}。下一步读入 s[${nextIndex}]。`;
+  }
+  return '继续播放下一步。';
+}
+
 export function Canvas() {
   const svgRef = useRef<SVGSVGElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { inputData, steps, currentStep, algorithmType } = useAppStore();
   const currentStepData = steps[currentStep];
-  const stateRef = useRef({ inputData, currentStepData, algorithmType });
+  const frameRevision = useAppStore((state) => state.steps.length);
+  const stateRef = useRef({ inputData, currentStepData, algorithmType, currentStep, totalSteps: steps.length });
 
   useEffect(() => {
     const svgElement = svgRef.current;
     const container = containerRef.current;
     if (!svgElement || !container) return;
 
-    stateRef.current = { inputData, currentStepData, algorithmType };
+    stateRef.current = { inputData, currentStepData, algorithmType, currentStep, totalSteps: steps.length };
     const svg = d3.select(svgElement);
     const root = svg.append('g').attr('class', 'main-group');
     const characters = root.append('g').attr('class', 'character-layer');
@@ -104,7 +147,7 @@ export function Canvas() {
     svgElement.addEventListener('canvas-step-change', renderEvent);
 
     const draw = (resetView: boolean) => {
-      const { inputData, currentStepData, algorithmType } = stateRef.current;
+      const { inputData, currentStepData, algorithmType, currentStep, totalSteps } = stateRef.current;
       if (!currentStepData) return;
       width = container.clientWidth;
       height = container.clientHeight;
@@ -154,14 +197,17 @@ export function Canvas() {
         .attr('fill', (d) => {
           const inWindow = windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right;
           if (isMatch && inWindow) return '#287c60';
+          if (teaching.operation === 'shrink' && d.index === (typeof currentStepData.variables.removedIndex === 'number' ? currentStepData.variables.removedIndex : teaching.focus?.index)) return '#b9842f';
           if (countChange && d.index === teaching.focus?.index) return '#b9842f';
           if (highlightIndices.includes(d.index)) return '#c99438';
           return inWindow ? '#356e5d' : '#26342e';
         })
         .attr('stroke', (d) => countChange && d.index === teaching.focus?.index
+          || teaching.operation === 'shrink' && d.index === (typeof currentStepData.variables.removedIndex === 'number' ? currentStepData.variables.removedIndex : teaching.focus?.index)
           ? '#f1c76e'
           : windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right ? '#83c8a9' : '#4b6156')
         .attr('stroke-width', (d) => countChange && d.index === teaching.focus?.index
+          || teaching.operation === 'shrink' && d.index === (typeof currentStepData.variables.removedIndex === 'number' ? currentStepData.variables.removedIndex : teaching.focus?.index)
           ? 3
           : windowState.left >= 0 && d.index >= windowState.left && d.index <= windowState.right ? 2 : 1);
       charUpdate.select<SVGTextElement>('.character-text')
@@ -212,14 +258,18 @@ export function Canvas() {
         .attr('x1', (d) => startX + d.index * charWidth + charWidth / 2 - 1)
         .attr('x2', (d) => startX + d.index * charWidth + charWidth / 2 - 1).attr('stroke', (d) => d.color);
 
-      markers.selectAll<SVGTextElement, string>('text.window-label').data(windowState.left < 0 ? [] : [windowState.windowContent])
+      markers.selectAll<SVGTextElement, string>('text.window-label')
+        .data([windowState.left < 0 ? null : windowState.windowContent])
         .join('text').attr('class', 'window-label').attr('x', logicalWidth / 2).attr('y', windowY)
         .attr('text-anchor', 'middle').attr('fill', '#f7fafc').attr('font-size', '14px')
-        .text((content) => `当前窗口：${content.split('').join(' · ')}  （长度 ${content.length}）`);
+        .text((content) => content === null
+          ? '当前窗口：尚未开始'
+          : `当前窗口：${content.split('').join(' · ')}  （长度 ${content.length}）`);
 
+      const isInitializing = teaching.operation === 'init';
       const countData: CountDatum[] = countChars.map((char) => ({
         char,
-        count: charCount[char] || 0,
+        count: isInitializing && algorithmType === 'fixed-window' ? targetCount[char] || 0 : charCount[char] || 0,
         target: targetCount[char] || 0,
         remaining: charCount[char] || 0,
       }));
@@ -261,11 +311,13 @@ export function Canvas() {
         .attr('opacity', (d) => focusedCountChar === d.char ? 1 : 0);
       countUpdate.select<SVGTextElement>('.count-char').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 8).text((d) => `'${d.char}'`);
       countUpdate.select<SVGTextElement>('.count-char-caption').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 19)
-        .text((d) => countChange?.char === d.char ? '当前字符' : '字符');
+        .text((d) => countChange?.char === d.char || comparedChar === d.char ? '本步字符' : '字符');
       countUpdate.select<SVGTextElement>('.count-window-label').attr('x', 12).attr('y', 34)
-        .text(() => algorithmType === 'variable-window' ? '剩余' : '窗口');
+        .text(() => isInitializing && algorithmType === 'fixed-window' ? '目标' : algorithmType === 'variable-window' ? '剩余' : '窗口');
       countUpdate.select<SVGRectElement>('.count-value-bg').attr('x', 0).attr('y', 38).attr('width', 26).attr('height', 24)
-        .attr('fill', (d) => (algorithmType === 'variable-window' ? d.remaining === 0 : d.count === d.target) ? '#287c60' : '#8b5148')
+        .attr('fill', (d) => isInitializing && algorithmType === 'fixed-window' ? '#356e5d'
+          : algorithmType === 'variable-window' ? d.remaining >= 0 ? '#356e5d' : '#8b5148'
+            : d.count === d.target ? '#287c60' : '#8b5148')
         .attr('stroke', '#17211d').attr('stroke-width', 2);
       countUpdate.select<SVGTextElement>('.count-value').attr('x', 13).attr('y', 54)
         .text((d) => algorithmType === 'variable-window' ? d.remaining : d.count);
@@ -274,25 +326,61 @@ export function Canvas() {
       countUpdate.select<SVGRectElement>('.target-value-bg').attr('x', 48).attr('y', 38).attr('width', 26).attr('height', 24);
       countUpdate.select<SVGTextElement>('.target-value').attr('x', 61).attr('y', 54).text((d) => d.target);
       countUpdate.select<SVGTextElement>('.count-status').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 73)
-        .attr('fill', (d) => algorithmType === 'variable-window'
+        .attr('fill', (d) => isInitializing && algorithmType === 'fixed-window' ? '#9ab4a4' : algorithmType === 'variable-window'
           ? d.remaining < 0 ? '#efaa9c' : d.remaining === 0 ? '#8bd0ae' : '#e9c877'
           : d.count === d.target ? '#8bd0ae' : '#efaa9c')
-        .text((d) => algorithmType === 'variable-window'
-          ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
-          : d.count === d.target ? '相同'
-            : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`);
+        .text((d) => isInitializing && algorithmType === 'fixed-window' ? '目标频次'
+          : algorithmType === 'variable-window'
+            ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
+            : d.count === d.target ? '相同'
+              : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`);
       countUpdate.select<SVGTextElement>('.count-change-label').attr('x', COUNT_CARD_WIDTH / 2).attr('y', 91)
         .attr('fill', (d) => countChange?.char === d.char ? '#f0ce7a' : 'none')
         .text((d) => countChange?.char === d.char ? `${countChange.before} → ${countChange.after}`
-          : comparedChar === d.char ? algorithmType === 'variable-window'
-            ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
-            : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`
-          : '');
+          : countChange ? ''
+            : comparedChar === d.char ? algorithmType === 'variable-window'
+              ? d.remaining < 0 ? `超 ${Math.abs(d.remaining)}` : d.remaining > 0 ? `缺 ${d.remaining}` : '刚好'
+              : d.count > d.target ? `多 ${d.count - d.target}` : `少 ${d.target - d.count}`
+            : '');
 
-      const title = '按顺序读入字符 → 检查频次 → 命中记下起点 → 窗口右移';
-      annotations.selectAll<SVGTextElement, string>('text.canvas-title').data([title]).join('text')
-        .attr('class', 'canvas-title').attr('x', logicalWidth / 2).attr('y', 26).attr('text-anchor', 'middle')
-        .attr('fill', '#f7fafc').attr('font-size', '13px').attr('font-weight', 'bold').text((d) => d);
+      const operationTitle = teaching.operation === 'init' ? '先统计目标字符'
+        : teaching.operation === 'enter' ? '读入一个新字符'
+        : teaching.operation === 'shrink' ? algorithmType === 'fixed-window' ? '移出窗口最左字符'
+          : '移出超量字符'
+        : teaching.operation === 'compare' ? algorithmType === 'fixed-window' ? '比较窗口频次' : '检查窗口长度'
+        : teaching.operation === 'match' ? '找到一个异位词'
+        : '扫描完成';
+      const stepTitle = `第 ${currentStep + 1} / ${totalSteps} 步  ·  ${operationTitle}`;
+      annotations.selectAll<SVGTextElement, string>('text.canvas-title').data([stepTitle]).join('text')
+        .attr('class', 'canvas-title').attr('x', logicalWidth / 2).attr('y', 27).attr('text-anchor', 'middle')
+        .attr('fill', '#f7fafc').attr('font-size', '15px').attr('font-weight', 'bold').text((d) => d);
+      annotations.selectAll<SVGTextElement, string>('text.frame-narration').data([teaching.narration]).join('text')
+        .attr('class', 'frame-narration').attr('x', logicalWidth / 2).attr('y', 49).attr('text-anchor', 'middle')
+        .attr('fill', '#b8c9be').attr('font-size', '11px').text((d) => d);
+      const stageLabels = algorithmType === 'fixed-window'
+        ? ['统计 p', '读入字符', '比较频次', '窗口右移']
+        : ['统计 p', '读入字符', '移出超量', '判断长度'];
+      const activeStage = teaching.operation === 'init' ? 0
+        : teaching.operation === 'enter' ? 1
+        : teaching.operation === 'shrink' ? algorithmType === 'variable-window' ? 2 : 3
+        : teaching.operation === 'match' || teaching.operation === 'done' ? 3
+        : algorithmType === 'variable-window' ? 3 : 2;
+      const stageGap = Math.min(220, (logicalWidth - 280) / 3);
+      const stageStartX = (logicalWidth - stageGap * 3) / 2;
+      const stageJoin = annotations.selectAll<SVGGElement, { label: string; index: number }>('g.algorithm-stage')
+        .data(stageLabels.map((label, index) => ({ label, index })), (d) => String(d.index));
+      stageJoin.exit().remove();
+      const stageEnter = stageJoin.enter().append('g').attr('class', 'algorithm-stage');
+      stageEnter.append('line').attr('class', 'stage-connector').attr('y1', 0).attr('y2', 0);
+      stageEnter.append('circle').attr('class', 'stage-dot').attr('r', 5);
+      stageEnter.append('text').attr('class', 'stage-label').attr('text-anchor', 'middle').attr('y', 20);
+      const stageUpdate = stageEnter.merge(stageJoin).attr('transform', (d) => `translate(${stageStartX + d.index * stageGap}, 68)`);
+      stageUpdate.select('line').attr('x1', -stageGap / 2).attr('x2', stageGap / 2)
+        .attr('stroke', (d) => d.index < activeStage ? '#72b89a' : '#43534b').attr('stroke-width', 2);
+      stageUpdate.select('circle').attr('fill', (d) => d.index === activeStage ? '#e5b85c' : d.index < activeStage ? '#72b89a' : '#43534b')
+        .attr('stroke', '#17211d').attr('stroke-width', 2);
+      stageUpdate.select<SVGTextElement>('text.stage-label').attr('fill', (d) => d.index === activeStage ? '#f0ce7a' : '#aab9b0')
+        .attr('font-size', (d) => d.index === activeStage ? 11 : 10).text((d) => d.label);
       annotations.selectAll<SVGTextElement, string>('text.target-caption').data(['目标 p：需要匹配的字符组成（顺序不重要）']).join('text')
         .attr('class', 'target-caption').attr('x', logicalWidth / 2).attr('y', targetY - 18).attr('text-anchor', 'middle')
         .attr('fill', '#86d7bf').attr('font-size', '11px').text((d) => d);
@@ -354,21 +442,27 @@ export function Canvas() {
   }, []);
 
   useEffect(() => {
-    stateRef.current = { inputData, currentStepData, algorithmType };
+    stateRef.current = { inputData, currentStepData, algorithmType, currentStep, totalSteps: steps.length };
     const svg = svgRef.current;
     if (!svg || !currentStepData) return;
     // State is kept in the effect's closure; triggering a resize-independent render preserves zoom.
     const event = new Event('canvas-step-change');
     svg.dispatchEvent(event);
-  }, [currentStepData, inputData, algorithmType]);
+  }, [currentStep, currentStepData, inputData, algorithmType, steps.length, frameRevision]);
 
   const teaching = currentStepData?.teaching;
   const operationLabel = teaching ? ({ init: '初始化', enter: '入窗', shrink: '移出左端', compare: '检查窗口', match: '命中', done: '完成' }[teaching.operation]) : '准备中';
   const operationDetail = teaching?.narration ?? '';
   const reason = currentStepData ? getTeachingReason(currentStepData, algorithmType) : '';
+  const nextAction = currentStepData ? getNextAction(currentStepData, algorithmType, inputData) : '';
 
   return (
     <div className={styles.container}>
+      <div className={styles.canvasKey} aria-hidden="true">
+        <span><i className={styles.keyWindow} /> 当前窗口</span>
+        <span><i className={styles.keyCurrent} /> 本步字符</span>
+        <span><i className={styles.keyMatch} /> 频次相同</span>
+      </div>
       <div ref={containerRef} className={styles.canvasViewport}>
         <svg ref={svgRef} className={styles.svg} />
       </div>
@@ -380,6 +474,10 @@ export function Canvas() {
         <div className={styles.teachingBlock}>
           <span className={styles.teachingLabel}>判断依据 / 状态变化</span>
           <div className={styles.teachingValue}>{reason}</div>
+        </div>
+        <div className={styles.nextAction}>
+          <span className={styles.nextActionLabel}>接下来</span>
+          <span>{nextAction}</span>
         </div>
       </section>
     </div>

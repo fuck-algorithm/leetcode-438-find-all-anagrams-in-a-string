@@ -21,6 +21,44 @@
   background-size: 20px 20px;
 }
 
+.canvasKey {
+  position: absolute;
+  z-index: 1;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  color: #aab9b0;
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.canvasKey span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.canvasKey i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.keyWindow {
+  background: #356e5d;
+}
+
+.keyCurrent {
+  background: #c99438;
+}
+
+.keyMatch {
+  background: #287c60;
+}
+
 .svg {
   display: block;
   width: 100%;
@@ -64,12 +102,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
   gap: 16px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   border-top: 1px solid #35463e;
   background: #111916;
   color: #edf4f0;
   font-size: 12px;
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .teachingBlock {
@@ -94,15 +132,39 @@
   color: #e0ebe4;
 }
 
+.nextAction {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #2b3931;
+  color: #e3d39b;
+}
+
+.nextActionLabel {
+  flex: 0 0 auto;
+  color: #c8ae62;
+  font-size: 10px;
+  font-weight: 650;
+}
+
 @media (max-width: 700px) {
+  .canvasKey {
+    top: 6px;
+    right: 8px;
+    gap: 6px;
+    font-size: 9px;
+  }
+
   .canvasViewport {
     min-height: 300px;
   }
 
   .teachingPanel {
     grid-template-columns: minmax(0, 1fr);
-    gap: 8px;
-    padding: 9px 10px;
+    gap: 6px;
+    padding: 8px 10px;
   }
 
   .teachingBlock + .teachingBlock {
