@@ -5,7 +5,7 @@
   border-bottom: 1px solid #35463e;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .toolbar {
@@ -118,6 +118,26 @@
   border-color: #75bb98;
 }
 
+.methodHint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: #aebbb2;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.methodTag {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid #40534a;
+  border-radius: 4px;
+  color: #c4d4ca;
+  background: #1b2720;
+  font-size: 10px;
+}
+
 .error {
   color: #f0b0a4;
   font-size: 11px;
@@ -143,6 +163,10 @@
   .algorithmSelector {
     border-right: 0;
     padding-right: 0;
+  }
+
+  .methodHint {
+    align-items: flex-start;
   }
 
   .inputRow {

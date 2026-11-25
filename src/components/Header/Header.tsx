@@ -3,10 +3,11 @@ import { getGitHubStars, GITHUB_REPO_URL } from '../../utils/github';
 import styles from './Header.module.css';
 
 interface HeaderProps {
+  onShowProblem: () => void;
   onShowThoughts: () => void;
 }
 
-export function Header({ onShowThoughts }: HeaderProps) {
+export function Header({ onShowProblem, onShowThoughts }: HeaderProps) {
   const [stars, setStars] = useState<number>(0);
 
   useEffect(() => {
@@ -38,8 +39,11 @@ export function Header({ onShowThoughts }: HeaderProps) {
       </div>
 
       <div className={styles.rightSection}>
+        <button className={styles.problemBtn} onClick={onShowProblem}>
+          题目描述
+        </button>
         <button className={styles.thoughtsBtn} onClick={onShowThoughts}>
-          💡 算法思路
+          解法说明
         </button>
         
         <a

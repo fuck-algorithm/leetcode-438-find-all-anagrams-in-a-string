@@ -5,12 +5,14 @@ import { CodePanel } from './components/CodePanel';
 import { Canvas } from './components/Canvas';
 import { ControlPanel } from './components/ControlPanel';
 import { AlgorithmThoughts } from './components/AlgorithmThoughts';
+import { ProblemDescription } from './components/ProblemDescription';
 import { WeChatFloat } from './components/WeChatFloat';
 import { useAppStore } from './stores/useAppStore';
 import './App.css';
 
 function App() {
   const [showThoughts, setShowThoughts] = useState(false);
+  const [showProblem, setShowProblem] = useState(false);
   const initialize = useAppStore((state) => state.initialize);
 
   useEffect(() => {
@@ -19,7 +21,7 @@ function App() {
 
   return (
     <div className="app">
-      <Header onShowThoughts={() => setShowThoughts(true)} />
+      <Header onShowProblem={() => setShowProblem(true)} onShowThoughts={() => setShowThoughts(true)} />
       <DataInput />
       
       <div className="main-content">
@@ -33,10 +35,11 @@ function App() {
 
       <ControlPanel />
       
-      <AlgorithmThoughts 
-        isOpen={showThoughts} 
-        onClose={() => setShowThoughts(false)} 
+      <AlgorithmThoughts
+        isOpen={showThoughts}
+        onClose={() => setShowThoughts(false)}
       />
+      <ProblemDescription isOpen={showProblem} onClose={() => setShowProblem(false)} />
       
       <WeChatFloat />
     </div>

@@ -91,6 +91,13 @@ export function DataInput() {
         </div>
       </div>
 
+      <div className={styles.methodHint} aria-live="polite">
+        <span className={styles.methodTag}>{algorithmType === 'fixed-window' ? '适合先理解' : '进一步优化'}</span>
+        {algorithmType === 'fixed-window'
+          ? '窗口始终等于 p 的长度；每一步直接对照字符频次，思路直观。'
+          : '用“目标 − 窗口”记录剩余需求；发现字符超量时才移动左边界，单次扫描即可。'}
+      </div>
+
       {error && <div className={styles.error}>{error}</div>}
 
       <div className={styles.samplesRow}>

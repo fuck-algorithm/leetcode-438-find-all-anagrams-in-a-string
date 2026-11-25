@@ -21,9 +21,12 @@ export function AlgorithmThoughts({ isOpen, onClose }: AlgorithmThoughtsProps) {
     <div className={styles.overlay} onClick={handleOverlayClick}>
       <div className={styles.modal}>
         <div className={styles.header}>
-          <h2 className={styles.title}>
-            {algorithmType === 'fixed-window' ? '定长滑窗' : '不定长滑窗'} - 算法思路
-          </h2>
+          <div>
+            <span className={styles.dialogEyebrow}>当前动画对应的解法</span>
+            <h2 className={styles.title}>
+              {algorithmType === 'fixed-window' ? '定长滑窗' : '不定长滑窗'}
+            </h2>
+          </div>
           <button className={styles.closeBtn} onClick={onClose}>
             ✕
           </button>
@@ -44,11 +47,15 @@ export function AlgorithmThoughts({ isOpen, onClose }: AlgorithmThoughtsProps) {
 function FixedWindowThoughts() {
   return (
     <>
+      <section className={styles.methodSummary}>
+        <span className={styles.summaryTag}>先理解这一种</span>
+        <p>窗口长度固定为 <code>|p|</code>。每次移动只更新一个新进入和一个刚离开的字符，再比较两边频次；规则直观，适合先建立“滑窗”概念。</p>
+      </section>
       <section className={styles.section}>
-        <h3>核心思路</h3>
+        <h3>为什么固定长度就够了？</h3>
         <p>
-          设 n 是 p 的长度。枚举 s 的所有长为 n 的子串 s'，如果 s' 的每种字母的出现次数，
-          和 p 的每种字母的出现次数都相同，那么 s' 是 p 的异位词。
+          异位词必须与 p 有相同的字符数量，所以候选窗口长度只能是 <code>p.length</code>。
+          每次只需比较窗口和 p 的字符频次，不必重新排序字符。
         </p>
       </section>
 
@@ -62,6 +69,20 @@ function FixedWindowThoughts() {
           <li>如果相等，说明找到了一个异位词，记录左端点索引</li>
           <li>移动窗口：右端点字符进入，左端点字符离开</li>
         </ol>
+      </section>
+
+      <section className={styles.section}>
+        <h3>这段动画怎么看</h3>
+        <ul className={styles.keyPoints}>
+          <li>上方字符串是 s，移动的左右边界圈出当前候选窗口</li>
+          <li>下方按字符比较窗口频次和目标频次；窗口未满时先不判断</li>
+          <li>频次全部相等时记录左端索引，然后窗口继续向右滑动</li>
+        </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h3>何时选它？</h3>
+        <p>先用定长法理解题意和窗口移动，再看不定长法如何把“频次比较”改成“只在某个字符超量时收缩”，从而省去每个窗口都完整比较频次的步骤。</p>
       </section>
 
       <section className={styles.section}>
@@ -87,11 +108,15 @@ function FixedWindowThoughts() {
 function VariableWindowThoughts() {
   return (
     <>
+      <section className={styles.methodSummary}>
+        <span className={styles.summaryTag}>在理解窗口后学习</span>
+        <p>把 <code>cnt[c] = 目标频次 − 窗口频次</code>。新字符进入时需求减一；若需求变负，说明它超量，再从左边移出字符直到恢复合法。</p>
+      </section>
       <section className={styles.section}>
-        <h3>核心思路</h3>
+        <h3>为什么只检查超量字符？</h3>
         <p>
-          枚举子串 s' 的右端点，如果发现 s' 其中一种字母的出现次数大于 p 的这种字母的出现次数，
-          则增大 s' 的左端点（缩小窗口）。如果发现 s' 的长度等于 p 的长度，则说明 s' 是 p 的异位词。
+          每个字符的 <code>cnt</code> 都表示还缺多少个：正数是未满足需求，0 是刚好，负数是窗口里多了。
+          移除左端字符直到没有负数；若此时窗口长度等于 p，字符频次就必然完全相同。
         </p>
       </section>
 
@@ -107,9 +132,23 @@ function VariableWindowThoughts() {
       </section>
 
       <section className={styles.section}>
+        <h3>这段动画怎么看</h3>
+        <ul className={styles.keyPoints}>
+          <li>目标频次作为初始 cnt；窗口字符进入，cnt 对应值减一</li>
+          <li>负数代表当前窗口含有超额字符，左指针逐步右移并归还离开字符</li>
+          <li>窗口合法且长度等于 p 时，记录窗口左端点</li>
+        </ul>
+      </section>
+
+      <section className={styles.section}>
+        <h3>相比定长法</h3>
+        <p>定长法每个窗口都完整对照频次；不定长法维护频次差，只在字符超量时收缩。两种算法的窗口动作和代码行会在动画中分别展示，可来回切换对比。</p>
+      </section>
+
+      <section className={styles.section}>
         <h3>复杂度分析</h3>
         <ul className={styles.complexity}>
-          <li><strong>时间复杂度：</strong>O(m + n)，其中 m 是 s 的长度，n 是 p 的长度</li>
+          <li><strong>时间复杂度：</strong>O(m·|Σ| + n)，其中 m 是 s 的长度，n 是 p 的长度，|Σ| 是字符集大小；当前实现每次滑动后检查字符集频次</li>
           <li><strong>空间复杂度：</strong>O(|Σ|)，用于存储字符计数</li>
         </ul>
       </section>
